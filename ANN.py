@@ -1,5 +1,7 @@
 import numpy as np
 import random
+import json
+import sys
 
 def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
@@ -92,3 +94,20 @@ class Network:
         #testing the ANN
         test_results = [(np.argmax(self.feedforward(input)), expected_output) for (input, expected_output) in test_data]
         return sum(int(y[x]) for (x, y) in test_results)
+
+    def export(self, filename):
+        data = {"sizes": self.sizes,
+        "weights": [w.tolist() for w in self.weights],
+        "biases": [b.tolist() for b in self.biases]} 
+        f = open(filename, 'w')
+        json.dump(data, f)
+        f.close()
+    
+    def load(self, filename):
+        f = open(filename, 'r')
+        data = json.load(f)
+        f.close()
+        self.sizes = data["sizes"]
+        self.weights = data["weights"]
+        self.biases = data["biases"]
+
