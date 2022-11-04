@@ -42,7 +42,7 @@ class Network:
             
             if test_data:
                 # feedback after every epoch TODO: maybe too inefficiant 
-                print(f"Epoch {j}: {self.evaluate(test_data)} / {n_test}")
+                print("Epoch {} : {} / {}".format(j,self.evaluate(test_data),n_test))
             else:
                 print(f"Epoch {j} complete")
 
@@ -92,8 +92,8 @@ class Network:
 
     def evaluate(self, test_data):
         #testing the ANN
-        test_results = [(np.argmax(self.feedforward(input)), expected_output) for (input, expected_output) in test_data]
-        return sum(int(y[x]) for (x, y) in test_results)
+        test_results = [(np.argmax(self.feed_forward(input)), expected_output) for (input, expected_output) in test_data]
+        return sum(int(y==x) for (x, y) in test_results)
 
     def export(self, filename):
         data = {"sizes": self.sizes,
