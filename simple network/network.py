@@ -32,7 +32,7 @@ class Network(object):
        
         # using mini batches 
         for j in range(epochs):
-            random.shuffle(training_data)
+            random.shuffle(training_data) 
             mini_batches = [
                 training_data[k:k+mini_batch_size]
                 for k in range(0, samples, mini_batch_size)]
