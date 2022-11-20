@@ -1,53 +1,71 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+
 
 class SelfAttention(nn.Module):
     def __init__(self, embed_size, heads):
-        # Initialize
+        super(SelfAttention, self).__init__()
         self.embed_size = embed_size
         self.heads = heads
         self.head_dim = embed_size // heads
 
-        assert (self.head_dim * heads == self.embed_size), "Embedding sizes need to be divisible by heads"
+        assert (
+            self.head_dim * heads == embed_size
+        ), "Embedding size needs to be divisible by heads"
 
-        # Initialize key, value and queries for self attention
         self.values = nn.Linear(embed_size, embed_size)
         self.keys = nn.Linear(embed_size, embed_size)
         self.queries = nn.Linear(embed_size, embed_size)
         self.fc_out = nn.Linear(embed_size, embed_size)
 
     def forward(self, values, keys, query, mask):
+        # Get number of training examples
         N = query.shape[0]
+
         value_len, key_len, query_len = values.shape[1], keys.shape[1], query.shape[1]
 
         values = self.values(values)  # (N, value_len, embed_size)
         keys = self.keys(keys)  # (N, key_len, embed_size)
         queries = self.queries(query)  # (N, query_len, embed_size)
 
-        # Split embedding into different heads
+        # Split the embedding into self.heads different pieces
         values = values.reshape(N, value_len, self.heads, self.head_dim)
         keys = keys.reshape(N, key_len, self.heads, self.head_dim)
-        queries = query.reshape(N, query_len, self.heads, self.head_dim)
+        queries = queries.reshape(N, query_len, self.heads, self.head_dim)
 
-        energie = torch.einsum("nqhd,nkhd->nhqk", [queries, keys])
-        #queries shape: (N, query_len, heads, head_dim)
-        #keys shape: (N, key_len, heads, head_dim)
-        #energie shape: (N, heads, query_len, key_len)
+        # Einsum does matrix mult. for query*keys for each training example
+        # with every other training example, don't be confused by einsum
+        # it's just how I like doing matrix multiplication & bmm
 
-        # applying mask
+        energy = torch.einsum("nqhd,nkhd->nhqk", [queries, keys])
+        # queries shape: (N, query_len, heads, heads_dim),
+        # keys shape: (N, key_len, heads, heads_dim)
+        # energy: (N, heads, query_len, key_len)
+
+        # Mask padded indices so their weights become 0
         if mask is not None:
-            energie = energie.masked_fill(mask == 0, float("-1e20"))
+            energy = energy.masked_fill(mask == 0, float("-1e20"))
 
-        attention = torch.softmax(energie / (self.embed_size ** (1/2)), dim=3)
+        # Normalize energy values similarly to seq2seq + attention
+        # so that they sum to 1. Also divide by scaling factor for
+        # better stability
+        attention = torch.softmax(energy / (self.embed_size ** (1 / 2)), dim=3)
         # attention shape: (N, heads, query_len, key_len)
 
-        out = torch.einsum("nhql,nlhd->nqhd", [attention, values]).reshape(N, query_len, self.heads*self.head_dim)
-        # out shape: (N, query_len,heads, head_dim) and last 2 dimensions flatten
-        # values shape: (N, value_len, heads, head_dim)
+        out = torch.einsum("nhql,nlhd->nqhd", [attention, values]).reshape(
+            N, query_len, self.heads * self.head_dim
+        )
+        # attention shape: (N, heads, query_len, key_len)
+        # values shape: (N, value_len, heads, heads_dim)
+        # out after matrix multiply: (N, query_len, heads, head_dim), then
+        # we reshape and flatten the last two dimensions.
+
         out = self.fc_out(out)
+        # Linear layer doesn't modify the shape, final shape will be
         # (N, query_len, embed_size)
+
         return out
+
 
 class TransformerBlock(nn.Module):
     def __init__(self, embed_size, heads, dropout, forward_expansion):
@@ -73,31 +91,54 @@ class TransformerBlock(nn.Module):
         out = self.dropout(self.norm2(forward + x))
         return out
 
+
 class Encoder(nn.Module):
-    def __init__(self, src_vocab_size,embed_size, num_layers, heads, device, forward_expension, dropout, max_length):
+    def __init__(
+        self,
+        src_vocab_size,
+        embed_size,
+        num_layers,
+        heads,
+        device,
+        forward_expansion,
+        dropout,
+        max_length,
+    ):
+
         super(Encoder, self).__init__()
         self.embed_size = embed_size
         self.device = device
-
         self.word_embedding = nn.Embedding(src_vocab_size, embed_size)
-        self.position_embedding =  nn.Embedding(max_length, embed_size)
+        self.position_embedding = nn.Embedding(max_length, embed_size)
 
-        self.layers = nn.ModuleList([
-            TransformerBlock(embed_size, heads, dropout=dropout, forward_expension=forward_expension)])
+        self.layers = nn.ModuleList(
+            [
+                TransformerBlock(
+                    embed_size,
+                    heads,
+                    dropout=dropout,
+                    forward_expansion=forward_expansion,
+                )
+                for _ in range(num_layers)
+            ]
+        )
 
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, mask):
         N, seq_length = x.shape
-
         positions = torch.arange(0, seq_length).expand(N, seq_length).to(self.device)
+        out = self.dropout(
+            (self.word_embedding(x) + self.position_embedding(positions))
+        )
 
-        out = self.dropout(self.word_embedding(x) + self.position_embedding(positions))
-
-        # run the self-attention and feed forward layer
+        # In the Encoder the query, key, value are all the same, it's in the
+        # decoder this will change. This might look a bit odd in this case.
         for layer in self.layers:
             out = layer(out, out, out, mask)
-        return x
+
+        return out
+
 
 class DecoderBlock(nn.Module):
     def __init__(self, embed_size, heads, forward_expansion, dropout, device):
@@ -218,9 +259,23 @@ class Transformer(nn.Module):
         enc_src = self.encoder(src, src_mask)
         out = self.decoder(trg, enc_src, src_mask, trg_mask)
         return out
-        
 
 
-        
+if __name__ == "__main__":
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
 
+    x = torch.tensor([[1, 5, 6, 4, 3, 9, 5, 2, 0], [1, 8, 7, 3, 4, 5, 6, 7, 2]]).to(
+        device
+    )
+    trg = torch.tensor([[1, 7, 4, 3, 5, 9, 2, 0], [1, 5, 6, 2, 4, 7, 6, 2]]).to(device)
 
+    src_pad_idx = 0
+    trg_pad_idx = 0
+    src_vocab_size = 10
+    trg_vocab_size = 10
+    model = Transformer(src_vocab_size, trg_vocab_size, src_pad_idx, trg_pad_idx, device=device).to(
+        device
+    )
+    out = model(x, trg[:, :-1])
+    print(out.shape)
