@@ -5,6 +5,7 @@ import wave
 import keyboard
 import os
 import playsound
+import openai
 
 
 chunk = 1024 
@@ -23,7 +24,9 @@ pa = pyaudio.PyAudio()
 
 #load whisper model
 model = whisper.load_model("base")
- 
+
+# read api key
+api_key = open("GPT_API_KEY", "r").read()
 
 while True:
     frames = [] 
@@ -44,9 +47,15 @@ while True:
         sf.setframerate(smpl_rt)
         sf.writeframes(b''.join(frames))
         sf.close()
+        
+        #transcripe with Whisper
         print("Transcribe...")
         result = model.transcribe("C:\\Users\\MaxKa\AI Playground\\Jarvis\\x.wav")
         print(result["text"])
+
+        #call gpt-3 api function
+
+
         myoutput = gTTS(text=result["text"], lang='en', slow=False)
         myoutput.save("C:\\Users\\MaxKa\AI Playground\\Jarvis\\output.mp3")
         playsound.playsound('C:\\Users\\MaxKa\AI Playground\\Jarvis\\output.mp3')
