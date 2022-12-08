@@ -17,9 +17,6 @@ chanels = 1
 # Record at 44400 samples per second
 smpl_rt = 44400 
 seconds = 4
-filename = "path_of_file.wav"
- 
-
 
 
 
@@ -27,6 +24,7 @@ def speak(s):
     myoutput = gTTS(text=s, lang='en', slow=False)
     myoutput.save("C:\\Users\\MaxKa\AI Playground\\Jarvis\\output.mp3")
     playsound.playsound('C:\\Users\\MaxKa\AI Playground\\Jarvis\\output.mp3')
+    os.remove('C:\\Users\\MaxKa\AI Playground\\Jarvis\\output.mp3')    
 pass
 
 if __name__ == "__main__":
