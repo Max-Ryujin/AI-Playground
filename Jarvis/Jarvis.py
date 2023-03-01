@@ -68,7 +68,3 @@ if __name__ == "__main__":
             messages=[{"role": "user", "content": transcription}])
 
             speak(completion)
-
-
-       
-
