@@ -16,6 +16,7 @@ chanels = 1
 # Record at 44400 samples per second
 smpl_rt = 44400 
 
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def speak(s):
     myoutput = gTTS(text=s, lang='en', slow=False)
