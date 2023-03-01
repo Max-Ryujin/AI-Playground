@@ -4,9 +4,13 @@ Jarvis is a simple to use voice to voice interface for ChatGPT using OpenAIs Cha
 
 ## Installation
 
-'''pip install -r requirements.txt'''
+clone the repository
+
+```pip install -r requirements.txt```
+
 add your OPENAI_API_KEY to your environment variables
-run Jarvis with '''python Jarvis.py'''
+
+run Jarvis with ```python Jarvis.py```
 
 ## Usage
 
