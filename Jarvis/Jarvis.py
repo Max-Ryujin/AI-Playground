@@ -1,11 +1,10 @@
-import whisper
 from gtts import gTTS
 import pyaudio
 import wave
 import keyboard
 import os
 import playsound
-from chatgpt_wrapper import ChatGPT
+import openai
 
 
 chunk = 1024 
@@ -16,8 +15,6 @@ chanels = 1
  
 # Record at 44400 samples per second
 smpl_rt = 44400 
-seconds = 4
-
 
 
 def speak(s):
@@ -29,14 +26,9 @@ pass
 
 if __name__ == "__main__":
 
-    #create bot
-    bot = ChatGPT()
 
     # Create an interface to PortAudio
     pa = pyaudio.PyAudio() 
-
-    #load whisper model
-    model = whisper.load_model("base")
 
     while True:
         frames = [] 
@@ -63,15 +55,18 @@ if __name__ == "__main__":
             sf.writeframes(b''.join(frames))
             sf.close()
             
-            #transcripe with Whisper
             print("Transcribe...")
-            result = model.transcribe("C:\\Users\\MaxKa\AI Playground\\Jarvis\\x.wav")
-            print(result["text"])
+            file = open("C:\\Users\\MaxKa\AI Playground\\Jarvis\\x.wav", "rb")
+            transcription = openai.Audio.transcribe("whisper-1", file)
 
-            #call gpt-3 api function
-            response = bot.ask(result["text"])
+            print(transcription)
 
-            speak(response)
+            #call chatGPT api function
+            completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo", 
+            messages=[{"role": "user", "content": transcription}])
+
+            speak(completion)
 
 
        
