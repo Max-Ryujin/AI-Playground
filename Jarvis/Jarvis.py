@@ -67,8 +67,7 @@ if __name__ == "__main__":
             stream.stop_stream()
             stream.close()
 
-            #transcripe to wav file
-
+            #transcripe to wav file and save it
             print('processing...')      
             sf = wave.open("C:\\Users\\MaxKa\AI Playground\\Jarvis\\x.wav", 'wb')
             sf.setnchannels(chanels)
@@ -77,6 +76,7 @@ if __name__ == "__main__":
             sf.writeframes(b''.join(frames))
             sf.close()
             
+            #transcribe the audio file
             print("Transcribe...")
             file = open("C:\\Users\\MaxKa\AI Playground\\Jarvis\\x.wav", "rb")
             transcription = openai.Audio.transcribe("whisper-1", file)
@@ -86,7 +86,10 @@ if __name__ == "__main__":
             #call chatGPT api function
             completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo", 
-            messages=[{"role": "user", "content": transcription['text']}])
+            messages=[
+                {"role": "system", "content": "You are Jarvis, a virtual assistant. You give short answers to questions and never say more then 3 sentences."}
+                {"role": "user", "content": transcription['text']}
+                ])
             print("\n ------------------ \n")
             print(completion['choices'][0]['message']['content'])
             speak(completion['choices'][0]['message']['content'])
