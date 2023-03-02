@@ -1,10 +1,14 @@
 from gtts import gTTS
 import pyaudio
 import wave
+import sys
 import keyboard
+import time
 import os
-import playsound
 import openai
+from pydub import AudioSegment
+from pydub.playback import play
+from pydub.effects import speedup
 
 
 chunk = 1024 
@@ -18,19 +22,36 @@ smpl_rt = 44400
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+#check if language is supported and set language variable to the correct language code
+# check if args[1] is empty because if it is empty the language variable will be set to english
+if(len(sys.argv) == 1 or sys.argv[1] == "en" or sys.argv[1] == "english" or sys.argv[1] == "englisch"):
+    language = "en"
+elif(sys.argv[1] == "de" or sys.argv[1] == "german" or sys.argv[1] == "deutsch"):
+    language = "de"
+else:
+    print("Language not supported")
+    exit()
+
+#function to speak the output 
 def speak(s):
-    myoutput = gTTS(text=s, lang='en', slow=False)
+    start = time.time()
+    myoutput = gTTS(text=s, lang=language, slow=False)
     myoutput.save("C:\\Users\\MaxKa\AI Playground\\Jarvis\\output.mp3")
-    playsound.playsound('C:\\Users\\MaxKa\AI Playground\\Jarvis\\output.mp3')
+    tts = AudioSegment.from_mp3('C:\\Users\\MaxKa\AI Playground\\Jarvis\\output.mp3')
+    output = speedup(tts,1.5,150)
+    output.export("file.mp3", format="mp3")
+    end = time.time()
+    print(end - start)
+    play(output)
     os.remove('C:\\Users\\MaxKa\AI Playground\\Jarvis\\output.mp3')    
+
 pass
 
 if __name__ == "__main__":
 
-
     # Create an interface to PortAudio
     pa = pyaudio.PyAudio() 
-
+    speak("Hello, I am Jarvis. How can I help you?")
     while True:
         frames = [] 
         if(keyboard.read_key() == "r"):
@@ -65,6 +86,7 @@ if __name__ == "__main__":
             #call chatGPT api function
             completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo", 
-            messages=[{"role": "user", "content": transcription}])
-
-            speak(completion)
+            messages=[{"role": "user", "content": transcription['text']}])
+            print("\n ------------------ \n")
+            print(completion['choices'][0]['message']['content'])
+            speak(completion['choices'][0]['message']['content'])
