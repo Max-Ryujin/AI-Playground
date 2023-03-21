@@ -87,9 +87,9 @@ if __name__ == "__main__":
             completion = openai.ChatCompletion.create(
             model="gpt-3.5-turbo", 
             messages=[
-                {"role": "system", "content": "You are Jarvis, a virtual assistant. You give short answers to questions and never say more then 3 sentences."}
-                {"role": "user", "content": transcription['text']}
-                ])
+                {"role": "system", "content": "You are Jarvis, a virtual assistant. You give short answers to questions and never say more then 3 sentences."},
+                {"role": "user", "content": transcription['text']}]
+                )
             print("\n ------------------ \n")
             print(completion['choices'][0]['message']['content'])
             speak(completion['choices'][0]['message']['content'])
