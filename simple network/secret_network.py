@@ -39,7 +39,8 @@ class Network(object):
                         for x, y in zip(sizes[:-1], sizes[1:])]
 
     def feedforward(self, a):
-        """Performs feedforward propagation to compute the output of the network.
+        """Performs feedforward propagation to compute the output of the network,
+        adjusting the activation thresholds dynamically.
 
         Args:
             a (numpy array): The input to the network.
@@ -47,9 +48,23 @@ class Network(object):
         Returns:
             numpy array: The output of the network.
         """
-        for b, w in zip(self.biases, self.weights):
-            a = sigmoid(np.dot(w, a)+b)
+        for i in range(self.num_layers - 1):
+            b, w = self.biases[i], self.weights[i]
+            z = np.dot(w, a) + b
+            a = sigmoid(z)
+
+            if i < self.num_layers - 2:
+                next_w = self.weights[i + 1]
+                next_b = self.biases[i + 1]
+                next_z = np.dot(next_w, a) + next_b
+                next_a = sigmoid(next_z)
+                # Compute adjusted biases for the current feedforward pass
+                adjusted_b = self.adjust_thresholds(next_a, next_w, b)
+                z = np.dot(w, a) + adjusted_b
+                a = sigmoid(z)
         return a
+
+
 
     def SGD(self, train_data, epochs, mini_batch_size, eta, test_data=None):
         """Performs stochastic gradient descent to train the network.
@@ -85,6 +100,23 @@ class Network(object):
                 print("Epoch {} : {} / {}".format(j,self.evaluate(test_data),n_test))
             else:
                 print("Epoch {} complete".format(j))
+
+
+    def adjust_thresholds(self, activations_next, weights_next, biases):
+        """Adjusts the thresholds (biases) of the current layer based on the next layer's activations.
+
+        Args:
+            activations_next (numpy array): The activations of the next layer.
+            weights_next (numpy array): The weights connecting the current layer to the next layer.
+            biases (numpy array): The biases of the current layer.
+
+        Returns:
+            numpy array: The adjusted biases.
+        """
+        adjustment_factor = 0.1  # scaling factor for adjustment
+        adjustment = adjustment_factor * np.dot(weights_next.T, activations_next)
+        return biases + adjustment
+
 
     def update_mini_batch(self, mini_batch, eta):
         """Updates the network's weights and biases using backpropagation on a mini batch.
